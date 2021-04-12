@@ -2,12 +2,16 @@ package ro.pub.cs.systems.eim.colocviu1_1;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class Colocviu1_1MainActivity extends AppCompatActivity {
 
@@ -17,7 +21,10 @@ public class Colocviu1_1MainActivity extends AppCompatActivity {
 
     private int number_of_clicks;
 
+    private IntentFilter intentFilter = new IntentFilter();
+    private MessageBroadcastReceiver messageBroadcastReceiver = new MessageBroadcastReceiver();
     private ButtonClickListener buttonClickListener = new ButtonClickListener();
+
     private class ButtonClickListener implements View.OnClickListener {
 
         @Override
@@ -45,17 +52,38 @@ public class Colocviu1_1MainActivity extends AppCompatActivity {
                 text = text + "East";
                 buttonPress.setText(text);
             }
+            if(v.getId() == R.id.navigate_tp_secondary_activity) {
+                String instr = buttonPress.getText().toString();
+                Intent intent = new Intent(getApplicationContext(), Colocviu1_1SecondaryActivity.class);
+                intent.putExtra(Constants.INSTRUCTIONS, instr);
+                startActivityForResult(intent, Constants.SECONDARY_ACTIVITY_REQUEST_CODE);
+
+                number_of_clicks = 0;
+                buttonPress.setText("");
+            }
+            if(number_of_clicks == 4) {
+                Intent intent = new Intent(getApplicationContext(), Colocviu1_1Service.class);
+                intent.putExtra(Constants.MESSAGE, buttonPress.getText().toString());
+                getApplicationContext().startService(intent);
+            }
         }
     }
 
+    private class MessageBroadcastReceiver extends BroadcastReceiver {
         @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(Constants.TAG, intent.getStringExtra(Constants.BROADCAST_RECEIVER_EXTRA));
+        }
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-            Log.d(Constants.TAG, "onCreate() method was invoked");
+        Log.d(Constants.TAG, "onCreate() method was invoked");
 
-            buttonPress = (TextView)findViewById(R.id.buttons_press);
+        buttonPress = (TextView)findViewById(R.id.buttons_press);
         buttonPress.setText("");
 
         number_of_clicks = 0;
@@ -73,6 +101,9 @@ public class Colocviu1_1MainActivity extends AppCompatActivity {
         east.setOnClickListener(buttonClickListener);
 
         navigate_to_secondary_activity = (Button)findViewById(R.id.navigate_tp_secondary_activity);
+        navigate_to_secondary_activity.setOnClickListener(buttonClickListener);
+
+        intentFilter.addAction(Constants.INTENT_ACTION);
     }
 
     @Override
@@ -114,10 +145,12 @@ public class Colocviu1_1MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         Log.d(Constants.TAG, "onResume() method was invoked");
+        registerReceiver(messageBroadcastReceiver, intentFilter);
     }
 
     @Override
     protected void onPause() {
+        unregisterReceiver(messageBroadcastReceiver);
         super.onPause();
         Log.d(Constants.TAG, "onPause() method was invoked");
     }
@@ -126,6 +159,14 @@ public class Colocviu1_1MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         Log.d(Constants.TAG, "onDestroy() method was invoked");
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        super.onActivityResult(requestCode, resultCode, intent);
+        if (requestCode == Constants.SECONDARY_ACTIVITY_REQUEST_CODE) {
+            Toast.makeText(this, "The activity returned with result " + resultCode, Toast.LENGTH_LONG).show();
+        }
     }
 
 }
